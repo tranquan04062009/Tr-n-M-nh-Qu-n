@@ -1,53 +1,79 @@
-# Python program to check if the input number is odd or even.
-# A number is even if division by 2 gives a remainder of 0.
-# If the remainder is 1, it is an odd number.
+import facebook
+import random
+import string
+import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
-num = int(input("Enter a number: "))
-if (num % 2) == 0:
-   print("{0} is Even".format(num))
-else:
-   print("{0} is Odd".format(num))
+# Replace with your own Facebook access token
+access_token = 'YOUR_FACEBOOK_ACCESS_TOKEN'
 
-# Python program to check if year is a leap year or not
+# Initialize the Facebook API
+graph = facebook.GraphAPI(access_token=access_token)
 
-year = 2000
+# Function to create a random Facebook page
+def create_facebook_page():
+    # Generate a random page name
+    page_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+    
+    # Create the Facebook page
+    page = graph.put_object(parent_object='me', connection_name='accounts', name=page_name)
+    
+    return page['id']
 
-# To get year (integer input) from the user
-# year = int(input("Enter a year: "))
+# Function to buff the follower count and like count of a Facebook page
+def buff_facebook_page(page_id):
+    # Buff the follower count using the Facebook Graph API
+    graph.put_object(page_id, 'followers', method='POST')
+    
+    # Buff the like count using the Facebook Graph API
+    graph.put_object(page_id, 'likes', method='POST')
 
-# divided by 100 means century year (ending with 00)
-# century year divided by 400 is leap year
-if (year % 400 == 0) and (year % 100 == 0):
-    print("{0} is a leap year".format(year))
+    # Buff the follower count using the Selenium WebDriver
+    driver = webdriver.Chrome()
+    driver.get(f"https://www.facebook.com/{page_id}")
+    try:
+        follow_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//div[@aria-label='Follow']")))
+        follow_button.click()
+    except TimeoutException:
+        print("Failed to find the follow button using Selenium.")
+    finally:
+        driver.quit()
 
-# not divided by 100 means not a century year
-# year divided by 4 is a leap year
-elif (year % 4 ==0) and (year % 100 != 0):
-    print("{0} is a leap year".format(year))
+    # Buff the like count using the Requests library
+    like_url = f"https://www.facebook.com/{page_id}/likes"
+    like_response = requests.post(like_url, data={'__a': 1})
+    if like_response.status_code == 200:
+        print("Liked the page using Requests.")
+    else:
+        print("Failed to like the page using Requests.")
 
-# if not divided by both 400 (century year) and 4 (not century year)
-# year is not leap year
-else:
-    print("{0} is not a leap year".format(year))
+# Function to display the main menu
+def display_menu():
+    print("Welcome to Vietnamese Facebook Buffing Service!")
+    print("1. Buff all created Facebook pages")
+    print("2. Create a new Facebook page")
+    print("3. Exit")
 
-# Python program to find the largest number among the three input numbers
+# Main program loop
+while True:
+    display_menu()
+    choice = input("Enter your choice (1-3): ")
 
-# change the values of num1, num2 and num3
-# for a different result
-num1 = 10
-num2 = 14
-num3 = 12
-
-# uncomment following lines to take three numbers from user
-#num1 = float(input("Enter first number: "))
-#num2 = float(input("Enter second number: "))
-#num3 = float(input("Enter third number: "))
-
-if (num1 >= num2) and (num1 >= num3):
-   largest = num1
-elif (num2 >= num1) and (num2 >= num3):
-   largest = num2
-else:
-   largest = num3
-
-print("The largest number is", largest)
+    if choice == '1':
+        num_pages = int(input("Enter the number of pages to buff: "))
+        for _ in range(num_pages):
+            page_id = create_facebook_page()
+            buff_facebook_page(page_id)
+            print(f"Buffed page: {page_id}")
+    elif choice == '2':
+        page_id = create_facebook_page()
+        print(f"Created new page: {page_id}")
+    elif choice == '3':
+        print("Exiting...")
+        break
+    else:
+        print("Invalid choice. Please try again.")
