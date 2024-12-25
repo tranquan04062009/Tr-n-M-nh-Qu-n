@@ -6,6 +6,7 @@ import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from tempfile import NamedTemporaryFile
+import asyncio
 
 # Cấu hình logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -110,8 +111,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(help_text)
 
-# Hàm chính
-async def main():
+# Hàm khởi tạo bot
+def start_bot():
     application = Application.builder().token(my_bot_token).build()
 
     # Đăng ký lệnh
@@ -122,8 +123,9 @@ async def main():
     application.add_handler(CommandHandler("help", help_command))
 
     # Chạy bot
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    # Sử dụng vòng lặp asyncio đang chạy (nếu có)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.to_thread(start_bot))
