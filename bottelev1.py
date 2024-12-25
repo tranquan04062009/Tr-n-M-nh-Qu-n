@@ -6,17 +6,15 @@ import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from tempfile import NamedTemporaryFile
-import asyncio
 
 # Cấu hình logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Lấy token từ biến môi trường
-my_bot_token = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# Kiểm tra nếu token không được tìm thấy
-if not my_bot_token:
+if not BOT_TOKEN:
     raise ValueError("Bot token is missing! Please set the BOT_TOKEN environment variable.")
 
 # Hàm tạo email và mật khẩu ngẫu nhiên
@@ -111,9 +109,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(help_text)
 
-# Hàm khởi tạo bot
-def start_bot():
-    application = Application.builder().token(my_bot_token).build()
+# Hàm chính để khởi chạy bot
+def main():
+    application = Application.builder().token(BOT_TOKEN).build()
 
     # Đăng ký lệnh
     application.add_handler(CommandHandler("getsoucre", get_source))
@@ -126,6 +124,4 @@ def start_bot():
     application.run_polling()
 
 if __name__ == "__main__":
-    # Sử dụng vòng lặp asyncio đang chạy (nếu có)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.to_thread(start_bot))
+    main()
