@@ -3,12 +3,9 @@ import requests
 import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from faker import Faker
 from tempfile import NamedTemporaryFile
 import random
 import string
-from bs4 import BeautifulSoup
-import time
 
 # Cấu hình logging để dễ dàng theo dõi lỗi
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -22,46 +19,14 @@ my_bot_token = os.getenv('BOT_TOKEN')
 if not my_bot_token:
     raise ValueError("Bot token is missing! Please set the BOT_TOKEN environment variable.")
 
-# Lấy API key từ môi trường (Mailinator hoặc dịch vụ tương tự)
-MAILINATOR_API_KEY = os.getenv('MAILINATOR_API_KEY')
-
-# Tạo đối tượng Faker để sinh email ngẫu nhiên
-fake = Faker()
-
-# Hàm tạo email tạm thời
-def generate_temp_email():
-    """Tạo email tạm thời với tên miền giả như mailinator."""
-    random_string = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-    return f"{random_string}@mailinator.com"
-
 # Hàm tạo email và mật khẩu ngẫu nhiên
 def generate_email_and_password():
     """Tạo email và mật khẩu ngẫu nhiên."""
     random_string = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-    email = f"{random_string}@mailinator.com"
+    domain = random.choice(["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "aol.com"])  # Chọn ngẫu nhiên một domain từ danh sách
+    email = f"{random_string}@{domain}"
     password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))  # Mật khẩu dài 12 ký tự
     return email, password
-
-# Hàm lấy mã xác minh từ Mailinator
-def get_verification_code(email):
-    """Lấy mã xác minh từ email trong Mailinator."""
-    url = f"https://api.mailinator.com/v2/domains/mailinator.com/inboxes/{email}/messages"
-    headers = {"Authorization": f"Bearer {MAILINATOR_API_KEY}"}
-    
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        messages = response.json()
-        if messages.get("messages"):
-            for msg in messages["messages"]:
-                # Kiểm tra nội dung email có chứa mã xác minh không
-                email_content = msg["data"]["body"]
-                soup = BeautifulSoup(email_content, 'html.parser')
-                # Giả sử mã xác minh là một chuỗi số trong email
-                verification_code = soup.find(string=lambda text: text and text.isdigit())
-                if verification_code:
-                    return verification_code.strip()
-    return None
 
 # Hàm lấy mã nguồn HTML của trang web
 def get_source_code(url):
@@ -95,28 +60,6 @@ async def get_source(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"Không thể lấy mã nguồn từ trang web {url}. Có thể trang web bị lỗi hoặc không tồn tại. 😢")
 
-# Hàm xử lý lệnh /laymail10p
-async def generate_temp_mail(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Tạo email tạm thời
-    email = generate_temp_email()
-    
-    # Gửi email cho người dùng
-    await update.message.reply_text(f"Đây là email tạm thời của bạn: {email} 📧")
-    
-    # Thông báo thời gian hết hạn
-    await update.message.reply_text(f"Lưu ý rằng email này sẽ hết hạn sau 10 phút! ⏰")
-
-    # Chờ 10 phút (600 giây)
-    time.sleep(600)
-
-    # Kiểm tra hộp thư của email và lấy mã xác minh nếu có
-    verification_code = get_verification_code(email)
-    
-    if verification_code:
-        await update.message.reply_text(f"Đã nhận mã xác minh từ email {email}: {verification_code} 🎯")
-    else:
-        await update.message.reply_text(f"Không có mã xác minh nào trong email {email}. Hãy thử lại sau! 😔")
-
 # Hàm xử lý lệnh /taomail
 async def generate_mail_and_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Tạo email và mật khẩu ngẫu nhiên
@@ -125,15 +68,75 @@ async def generate_mail_and_password(update: Update, context: ContextTypes.DEFAU
     # Gửi thông tin email và mật khẩu cho người dùng
     await update.message.reply_text(f"Đây là email và mật khẩu ngẫu nhiên của bạn:\n\nEmail: {email}\nMật khẩu: {password} 🔐")
 
+# Tính năng mới: Cung cấp sự thật ngẫu nhiên
+async def random_fact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    facts = [
+        "Một con voi có thể nghe được tiếng con voi khác kêu từ xa hơn 5km!",
+        "Tất cả các loài chim có xương sống, không chỉ là các loài biết bay.",
+        "Con người và loài chim đều có bộ xương giống nhau trong cấu trúc cơ bản!",
+        "Có khoảng 60% nước trong cơ thể con người, giúp duy trì các chức năng cơ thể.",
+        "Cây bách hương có thể sống đến 3.000 năm tuổi."
+    ]
+    fact = random.choice(facts)
+    await update.message.reply_text(f"Sự thật ngẫu nhiên: {fact} 🤓")
+
+# Tính năng mới: Kiểm tra thời tiết của thành phố (Sử dụng OpenWeatherMap API)
+async def weather(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) == 0:
+        await update.message.reply_text("Vui lòng cung cấp tên thành phố để kiểm tra thời tiết! 🌤️")
+        return
+
+    city = " ".join(context.args)
+    
+    # API của OpenWeatherMap
+    api_key = os.getenv('OPENWEATHERMAP_API_KEY')
+    
+    if not api_key:
+        await update.message.reply_text("API key cho OpenWeatherMap chưa được cấu hình! 🌧️")
+        return
+    
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=vi"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if data.get('cod') == 200:
+            weather_data = data['weather'][0]
+            temp = data['main']['temp']
+            humidity = data['main']['humidity']
+            weather_desc = weather_data['description']
+            
+            weather_message = f"Thời tiết tại {city}:\n- Nhiệt độ: {temp}°C\n- Độ ẩm: {humidity}%\n- Mô tả: {weather_desc.capitalize()}"
+            await update.message.reply_text(weather_message)
+        else:
+            await update.message.reply_text(f"Không thể lấy thông tin thời tiết cho {city}. Kiểm tra lại tên thành phố và thử lại. ❌")
+    else:
+        await update.message.reply_text(f"Không thể lấy dữ liệu thời tiết từ OpenWeatherMap. ❌")
+
+# Tính năng mới: Lệnh /help để hướng dẫn sử dụng
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = """
+    Các lệnh có sẵn của bot:
+    
+    /getsoucre <url> - Lấy mã nguồn HTML của trang web.
+    /taomail - Tạo email và mật khẩu ngẫu nhiên.
+    /randomfact - Cung cấp sự thật ngẫu nhiên.
+    /weather <city> - Kiểm tra thời tiết của thành phố.
+    /help - Xem hướng dẫn về các lệnh.
+    """
+    await update.message.reply_text(help_text)
+
 # Hàm chính để khởi tạo và chạy bot
 async def main():
     # Tạo ứng dụng bot với token lấy từ biến môi trường
     application = Application.builder().token(my_bot_token).build()
     
-    # Đăng ký các lệnh /laymail10p, /getsoucre, /taomail
-    application.add_handler(CommandHandler("laymail10p", generate_temp_mail))
+    # Đăng ký các lệnh
     application.add_handler(CommandHandler("getsoucre", get_source))
     application.add_handler(CommandHandler("taomail", generate_mail_and_password))
+    application.add_handler(CommandHandler("randomfact", random_fact))
+    application.add_handler(CommandHandler("weather", weather))
+    application.add_handler(CommandHandler("help", help_command))
     
     # Bắt đầu bot
     await application.run_polling()
