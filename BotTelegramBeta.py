@@ -4,13 +4,15 @@ from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, ChatMemberHandler
 from PIL import Image, ImageDraw, ImageFont
 import os
-from telegram import Bot
 
 # Lấy token từ biến môi trường
-TOKEN = os.getenv("BOT_TOKEN")
+my_bot_token = os.getenv('BOT_TOKEN')
 
-# Khởi tạo bot
-bot = Bot(token=TOKEN)
+# Kiểm tra nếu token không được tìm thấy
+if not my_bot_token:
+    raise ValueError("Bot token is missing! Please set the BOT_TOKEN environment variable.")
+
+application = Application.builder().token(my_bot_token).build()
 
 # Enable logging
 logging.basicConfig(
