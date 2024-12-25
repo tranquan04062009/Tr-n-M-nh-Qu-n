@@ -3,9 +3,14 @@ from telegram import __version__ as TG_VER
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, ChatMemberHandler
 from PIL import Image, ImageDraw, ImageFont
+import os
+from telegram import Bot
 
-# Token của bot Telegram
-my_bot_token = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+# Lấy token từ biến môi trường
+TOKEN = os.getenv("BOT_TOKEN")
+
+# Khởi tạo bot
+bot = Bot(token=TOKEN)
 
 # Enable logging
 logging.basicConfig(
